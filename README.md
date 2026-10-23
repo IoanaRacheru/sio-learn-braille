@@ -1,4 +1,3 @@
-# sio-learn-braille
 # Sistem interactiv pentru exersarea alfabetului Braille
 
 Proiect realizat pentru disciplina SIO, folosind o placa
@@ -25,11 +24,3 @@ ofera feedback audio si vizual.
 - Difuzor si card microSD
 Sase butoane reprezinta punctele Braille, iar celelalte doua
 sunt folosite pentru Confirmare si Mod/Repeta.
-
-
-Comunicarea cu OLED-ul va fi implementata folosind registrele TWI.
-
-## Stadiul proiectului
-
-Etapa initiala: definirea cerintelor, alegerea componentelor
-si organizarea proiectului. Functionalitatile urmeaza sa fie implementate.
