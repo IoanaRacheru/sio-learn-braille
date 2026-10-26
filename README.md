@@ -21,8 +21,9 @@ ofera feedback audio si vizual.
 - Doua module cu cate patru butoane (sau modul cu 8 butoane, pe 2 coloane)
 - Display LCD
 - Modul audio DFPlayer Mini
-- Difuzor si card microSD
 - Modul Bluetooth
+- Difuzor si card microSD
+
 Sase butoane reprezinta punctele Braille, iar celelalte doua
 sunt folosite pentru Confirmare si Mod/Repeta.
 
