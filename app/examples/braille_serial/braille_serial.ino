@@ -1,4 +1,5 @@
 #include "braille.h"
+#include "menu.h"
 
 char input_text[24];
 uint8_t input_length = 0;
@@ -39,14 +40,20 @@ void process_input() {
 
 void setup() {
   Serial.begin(9600);
+  menu_begin();
+  
 }
 
 void loop() {
+  menu_update();
   while (Serial.available() > 0) {
     char received_character = static_cast<char>(Serial.read());
     // Process a complete line when Enter is received.
     if (received_character == '\n' || received_character == '\r') {
-      if (input_length != 0 || input_too_long) process_input();
+      if (input_length != 0 || input_too_long) {
+        input_text[input_length] = '\0';
+        if (menu_handle_line(input_text, input_too_long)) process_input();
+      }
       input_length = 0;
       input_too_long = false;
     } else if (!input_too_long) {
