@@ -1,4 +1,5 @@
 #include "braille.h"
+#include "hardware_diagnostics.h"
 #include "menu.h"
 
 char input_text[24];
@@ -40,12 +41,16 @@ void process_input() {
 
 void setup() {
   Serial.begin(9600);
-  menu_begin();
-  
+  hardware_diagnostics_begin();
 }
 
 void loop() {
-  menu_update();
+  static bool startup_complete = false;
+  if (!startup_complete) {
+    if (!hardware_diagnostics_complete()) return;
+    startup_complete = true;
+    menu_begin();
+  }
   while (Serial.available() > 0) {
     char received_character = static_cast<char>(Serial.read());
     // Process a complete line when Enter is received.

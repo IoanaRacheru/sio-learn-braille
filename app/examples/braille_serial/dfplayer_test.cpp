@@ -10,31 +10,42 @@ enum class Stage { idle, booting, waiting_for_card, setting_volume, playing, fai
 Stage stage = Stage::idle;
 unsigned long stage_started = 0;
 
-// Construct only when explicitly started: merely linking this module does
-// not configure pins or claim the SoftwareSerial receive interrupt.
-SoftwareSerial& audio_serial() {
-  static SoftwareSerial serial(11, 10); // Constructor order: RX, TX.
-  return serial;
+void fail() {
+  Serial.println(F("DFPlayer test stopped. Check 5V/GND, crossed RX/TX, and SD card; reset to retry."));
+  dfplayer_serial().end();
+  stage = Stage::failed;
 }
-DFRobotDFPlayerMini& player() {
+}
+
+SoftwareSerial& dfplayer_serial() {
+  static SoftwareSerial mp3Serial(11, 12);
+  return mp3Serial;
+}
+
+DFRobotDFPlayerMini& dfplayer_player() {
   static DFRobotDFPlayerMini instance;
   return instance;
 }
-void fail() {
-  Serial.println(F("DFPlayer test stopped. Check 5V/GND, crossed RX/TX, and SD card; reset to retry."));
-  audio_serial().end();
-  stage = Stage::failed;
-}
+
+bool dfplayer_begin() {
+  static const bool initialized = [] {
+    dfplayer_serial().begin(dfplayer_baud_rate);
+    // Set up the UART and parser without a reset or an SD-card wait.
+    return dfplayer_player().begin(dfplayer_serial(), false, false);
+  }();
+  dfplayer_serial().listen();
+  return initialized;
 }
 
 void dfplayer_test_begin() {
   if (stage != Stage::idle) return;
   Serial.begin(9600);
-  Serial.println(F("DFPlayer test: RX=D11, TX=D10, debug/audio=9600 baud."));
-  audio_serial().begin(9600);
-  // No reset/wait here. This return value only confirms library setup,
-  // NOT hardware presence. Require an actual card-online event below.
-  if (!player().begin(audio_serial(), false, false)) {
+  Serial.print(F("DFPlayer test: RX=D"));
+  Serial.print(dfplayer_rx_pin);
+  Serial.print(F(", TX=D"));
+  Serial.print(dfplayer_tx_pin);
+  Serial.println(F(", debug/audio=9600 baud."));
+  if (!dfplayer_begin()) {
     Serial.println(F("DFPlayer library initialization failed."));
     fail();
     return;
@@ -46,22 +57,23 @@ void dfplayer_test_begin() {
 
 void dfplayer_test_update() {
   if (stage == Stage::idle || stage == Stage::failed) return;
+  DFRobotDFPlayerMini& player = dfplayer_player();
   if (stage == Stage::booting) {
     if (millis() - stage_started < 1000UL) return;
-    player().reset(); // ACK disabled: no wait for a missing device.
+    player.reset(); // ACK disabled: no wait for a missing device.
     stage = Stage::waiting_for_card;
     stage_started = millis();
     return;
   }
 
-  if (player().available()) {
-    const uint8_t type = player().readType();
-    const int value = player().read();
+  if (player.available()) {
+    const uint8_t type = player.readType();
+    const int value = player.read();
     switch (type) {
       case DFPlayerCardOnline:
         if (stage == Stage::waiting_for_card) {
           Serial.println(F("DFPlayer initialization successful: SD card online."));
-          player().volume(10);
+          player.volume(10);
           Serial.println(F("Volume set to 10/30."));
           stage = Stage::setting_volume;
           stage_started = millis();
@@ -102,7 +114,7 @@ void dfplayer_test_update() {
     Serial.println(F("DFPlayer initialization failed: no SD-card-online reply within 5 seconds."));
     fail();
   } else if (stage == Stage::setting_volume && millis() - stage_started >= 100UL) {
-    player().playMp3Folder(1);
+    player.playMp3Folder(1);
     Serial.println(F("Play command sent for /mp3/0001.mp3. Listen for sound; command alone does not confirm playback."));
     stage = Stage::playing;
   }

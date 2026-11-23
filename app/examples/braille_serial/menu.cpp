@@ -3,16 +3,10 @@
 #include "braille.h"
 #include "learning_mode.h"
 #include "test_mode.h"
-#include "dfplayer_test.h"
 
 namespace {
-enum class Mode { menu, learning, test, free_writing, dfplayer };
+enum class Mode { menu, learning, test, free_writing };
 Mode active_mode = Mode::menu;
-bool dfplayer_started = false;
-}
-
-void menu_update() {
-  if (dfplayer_started) dfplayer_test_update();
 }
 
 bool mode_command(const char* text, char command) {
@@ -37,7 +31,7 @@ bool mode_read_answer(const char* text, uint8_t& mask) {
 
 void menu_begin() {
   active_mode = Mode::menu;
-  Serial.println(F("\n===== BRAILLE MENU =====\n1. Learning Mode\n2. Test Mode\n3. Free Writing Mode\n4. Test DFPlayer\n\nSelect mode:"));
+  Serial.println(F("\n===== BRAILLE MENU =====\n1. Learning Mode\n2. Test Mode\n3. Free Writing Mode\n\nSelect mode:"));
 }
 
 bool menu_handle_line(const char* text, bool too_long) {
@@ -54,34 +48,18 @@ bool menu_handle_line(const char* text, bool too_long) {
   }
   switch (active_mode) {
     case Mode::menu:
-      if (text[0] == '4' && text[1] == '\0') {
-#if ENABLE_DFPLAYER_TEST
-        active_mode = Mode::dfplayer;
-        Serial.println(F("\n===== DFPLAYER TEST =====\nPress M for menu at any time."));
-        if (!dfplayer_started) {
-          dfplayer_started = true;
-          dfplayer_test_begin();
-        } else {
-          Serial.println(F("Test already started; initialization will not repeat. Reset the board to retry."));
-        }
-#else
-        Serial.println(F("DFPlayer test disabled. Build with ENABLE_DFPLAYER_TEST=1 for all C++ files.\nSelect mode:"));
-#endif
-      } else if (text[0] >= '1' && text[0] <= '3' && text[1] == '\0') {
+      if (text[0] >= '1' && text[0] <= '3' && text[1] == '\0') {
         if (text[0] == '1') { active_mode = Mode::learning; learning_mode_begin(); }
         else if (text[0] == '2') { active_mode = Mode::test; test_mode_begin(); }
         else {
           active_mode = Mode::free_writing;
           Serial.println(F("\n===== FREE WRITING MODE =====\nEnter Braille dots, or M for menu."));
         }
-      } else Serial.println(F("Invalid command. Select 1, 2, 3, or 4."));
+      } else Serial.println(F("Invalid command. Select 1, 2, or 3."));
       break;
     case Mode::learning: learning_mode_handle_line(text); break;
     case Mode::test: test_mode_handle_line(text, submitted_at); break;
     case Mode::free_writing: return true;
-    case Mode::dfplayer:
-      Serial.println(F("Press M for menu. Reset the board to retry the DFPlayer test."));
-      break;
   }
   return false;
 }
